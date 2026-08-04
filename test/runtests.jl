@@ -63,9 +63,64 @@ tol(::Type{T}) where {T} = sqrt(eps(real(T))) * 100
         @test LibTAPP.get_extents(info) == Int64[2, 4, 5]
         LibTAPP.set_strides!(info, Int64[1, 2, 8])
         @test LibTAPP.get_strides(info) == Int64[1, 2, 8]
+        LibTAPP.set_nmodes!(info, 2)
+        @test LibTAPP.get_nmodes(info) == 2
         LibTAPP.destroy!(info)
 
         @test_throws ArgumentError LibTAPP.TensorInfo(Float64, Int64[3, 4], Int64[1])
+    end
+
+    @testset "status objects" begin
+        # This implementation never produces a status -- upstream defines no
+        # semantics for the object beyond its destructor, and the header recommends
+        # passing null. The destructor exists so portable caller code links.
+        @test LibTAPP.destroy_status(0) === nothing
+    end
+
+    @testset "batched execution, $T" for T in (Float64, ComplexF64)
+        # `TAPP_execute_batched_product` is not reachable through the backend, so
+        # without this it is a wrapper nothing calls -- and the claim that LibTAPP
+        # is a *complete* transcription would be untested exactly where an unused
+        # signature is most likely to be wrong.
+        m, k, n, nbatch = 3, 4, 2, 3
+        As = [randn(T, m, k) for _ in 1:nbatch]
+        Bs = [randn(T, k, n) for _ in 1:nbatch]
+        Ds = [zeros(T, m, n) for _ in 1:nbatch]
+
+        # Column-major strides, and labels for D[i,j] = sum_k A[i,k] B[k,j].
+        infoA = LibTAPP.TensorInfo(T, Int64[m, k], Int64[1, m])
+        infoB = LibTAPP.TensorInfo(T, Int64[k, n], Int64[1, k])
+        infoD = LibTAPP.TensorInfo(T, Int64[m, n], Int64[1, m])
+        plan = LibTAPP.Product(
+            LibTAPP.Handle(),
+            LibTAPP.TAPP_IDENTITY, infoA, Int64[2, 1],
+            LibTAPP.TAPP_IDENTITY, infoB, Int64[1, 3],
+            LibTAPP.TAPP_IDENTITY, infoD, Int64[2, 3],
+            LibTAPP.TAPP_IDENTITY, infoD, Int64[2, 3],
+        )
+
+        alpha = Ref(one(T))
+        beta = Ref(zero(T))
+        GC.@preserve As Bs Ds alpha beta begin
+            LibTAPP.execute_batched!(
+                plan, LibTAPP.Executor(), alpha,
+                [pointer(A) for A in As], [pointer(B) for B in Bs],
+                beta, [Ptr{T}(C_NULL) for _ in 1:nbatch], [pointer(D) for D in Ds]
+            )
+        end
+
+        for b in 1:nbatch
+            want = As[b] * Bs[b]
+            @test norm(Ds[b] - want) <= tol(T) * norm(want)
+        end
+        # Each batch must have used its *own* buffers, which a loop that ignored the
+        # pointer arrays would not.
+        @test Ds[1] != Ds[2]
+
+        @test_throws ArgumentError LibTAPP.execute_batched!(
+            plan, LibTAPP.Executor(), alpha,
+            [pointer(As[1])], Ptr{T}[], beta, Ptr{T}[], Ptr{T}[]
+        )
     end
 
     @testset "attributes are exported and refuse" begin
