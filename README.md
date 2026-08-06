@@ -133,8 +133,23 @@ distinction matters more than the numbers.
 | Threading | Implemented, correct, **scaling unmeasured**, off by default |
 | Absolute throughput on your machine | **Unknown** |
 
-Off x86 there is no vectorised kernel at all — the portable scalar path is correct
-and not competitive. A slow aarch64 run is the documented behaviour, not a bug.
+Off x86 there is **no hand-written vectorised kernel** — the portable scalar path
+is what runs, and a slower aarch64 run is documented behaviour, not a bug.
+
+**How much slower is now measured, and it is less than this note used to imply.**
+On an Apple M3 Max, single-threaded over 12 shapes at 64 MiB, the scalar path
+reaches a geomean 19.8 GF/s in `f64` and 24.2 in `c64`, against an OpenBLAS-TTGT
+baseline at 30.7 and 35.0 — about **0.65x**, not a tenth.
+
+LLVM vectorises the micro-kernel to NEON unprompted; what it cannot do is fuse
+`acc += a * b` into a single `fmla`, because that would drop a rounding. So the
+path spends two instructions per multiply-accumulate where the hardware offers
+one, which halves the ceiling available to it — and on its best shape it then
+reaches 80.5% of that halved ceiling, against OpenBLAS's 87.1% of the full one.
+Expect roughly a factor of two from a hand-written NEON kernel, not ten.
+
+Measured on one Apple part only, and **not a pinned measurement** — macOS has no
+CPU affinity API. Nothing here transfers to another aarch64 core.
 
 ## License
 
