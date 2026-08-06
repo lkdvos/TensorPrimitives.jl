@@ -33,7 +33,8 @@ julia --project=$BBROOT/env -e 'using Pkg; Pkg.add("BinaryBuilder")'
 mkdir -p $BBROOT/src/tensorprimitives-rs-0.1.0
 git archive --format=tar HEAD | tar -x -C $BBROOT/src/tensorprimitives-rs-0.1.0
 
-cd packaging/yggdrasil
+# the recipe lives in a Yggdrasil fork, not in this repository -- see RELEASING.md step 4
+cd <yggdrasil-fork>/T/tensorprimitives_tapp
 TAPP_LOCAL_SRC=$BBROOT/src julia --project=$BBROOT/env build_tarballs.jl \
     x86_64-linux-gnu --verbose --deploy=local
 # -> $BBROOT/depot/dev/tensorprimitives_tapp_jll
