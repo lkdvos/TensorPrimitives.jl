@@ -19,26 +19,24 @@ Pkg.develop(path = "path/to/tensorprimitives-rs/julia/TensorPrimitives")
 Pkg.develop(path = "path/to/tensorprimitives_tapp_jll")   # see below
 ```
 
-The JLL comes from the BinaryBuilder recipe in the same repository. To build one
-locally:
+The JLL comes from a BinaryBuilder recipe, which lives in Yggdrasil rather than in
+this repository — see `RELEASING.md` step 4. To build one locally:
 
 ```bash
-# In a checkout of tensorprimitives-rs
-export BBROOT=/tmp/$USER/bb                       # local disk: overlayfs cannot
-mkdir -p $BBROOT/{env,tmp,storage,depot,src}      # use an NFS upperdir
+export BBROOT=/tmp/$USER/bb                   # local disk: overlayfs cannot
+mkdir -p $BBROOT/{env,tmp,storage,depot}      # use an NFS upperdir
 export JULIA_DEPOT_PATH=$BBROOT/depot TMPDIR=$BBROOT/tmp
 export BINARYBUILDER_STORAGE_DIR=$BBROOT/storage
 julia --project=$BBROOT/env -e 'using Pkg; Pkg.add("BinaryBuilder")'
 
-mkdir -p $BBROOT/src/tensorprimitives-rs-0.1.0
-git archive --format=tar HEAD | tar -x -C $BBROOT/src/tensorprimitives-rs-0.1.0
-
-# the recipe lives in a Yggdrasil fork, not in this repository -- see RELEASING.md step 4
 cd <yggdrasil-fork>/T/tensorprimitives_tapp
-TAPP_LOCAL_SRC=$BBROOT/src julia --project=$BBROOT/env build_tarballs.jl \
-    x86_64-linux-gnu --verbose --deploy=local
+julia --project=$BBROOT/env build_tarballs.jl x86_64-linux-gnu \
+    --verbose --deploy=local
 # -> $BBROOT/depot/dev/tensorprimitives_tapp_jll
 ```
+
+The recipe builds from the commit it pins, so a local build is of a released
+commit and not of the working tree.
 
 ## Using it
 
