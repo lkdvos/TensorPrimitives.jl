@@ -1,0 +1,35 @@
+[general]
+
+library_name = "libtensorprimitives_tapp"
+
+# `false`, so the enumerators come out as CEnum's `@cenum` rather than Julia's
+# native `@enum`. Not a style choice. Every enum in `tapp.h` is anonymous and every
+# function that takes one declares it as `int` (`TAPP_datatype`, `TAPP_element_op`,
+# `TAPP_error` are all `typedef int`), so a native `@enum` value cannot be passed to
+# the very functions it exists for -- `convert(Cint, x)` is a MethodError -- and,
+# worse, `x == 0` against a code the library *returned* is silently `false`. `@cenum`
+# converts and compares as the ABI's plain `int` does.
+use_julia_native_enum_type = false
+use_deterministic_symbol = true
+auto_mutability = true
+
+# The include guard, the empty visibility macro, and two macros that cannot be
+# translated: `TAPP_IN_PLACE` expands to `NULL`, which is not a Julia name, and
+# `TAPP_VERSION_AT_LEAST` is function-like. The version *numbers* are wanted and
+# come through `macro_mode = "basic"` below.
+output_ignorelist = [
+    "TENSORPRIMITIVES_TAPP_H",
+    "TAPP_EXPORT",
+    "TAPP_IN_PLACE",
+    "TAPP_VERSION_AT_LEAST",
+]
+
+[codegen]
+use_ccall_macro = true
+
+[codegen.macro]
+macro_mode = "basic"
+
+functionlike_macro_includelist = [
+
+]
