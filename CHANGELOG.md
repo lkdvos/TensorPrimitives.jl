@@ -23,7 +23,14 @@ lived as `julia/TensorPrimitives` and shared that repository's version.
   `tapp.h` the JLL ships as a `FileProduct`, with the generator toolchain pinned.
   CI regenerates and fails on a diff, so the bindings cannot drift from the header.
   Before this they were a hand transcription — a third copy of the interface, after
-  the header itself and the Rust side's `abi_layout.rs`.
+  the header itself and the Rust side's `abi_layout.rs`. Two things fell out of
+  generating rather than assuming: **one file covers all 17 platforms**, because the
+  header declares no struct and its `intptr_t` handles land on `Cptrdiff_t`, which
+  Julia resolves per platform (the generator proves this and fails if it stops being
+  true); and the enumerators are CEnum's `@cenum` rather than Julia's native `@enum`,
+  because every enum in the header is anonymous and every function taking one declares
+  it `int`, so native enum values cannot be passed to the functions they exist for and
+  compare silently `false` against a code the library returned.
 * **A documented process context.** `handle()` and `executor()` create one
   `TAPP_handle` and one `TAPP_executor` per process, on first use rather than in
   `__init__`, so loading the package touches no library state. They are public
