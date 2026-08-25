@@ -38,6 +38,14 @@ jobs:
   # The bindings in `src/lib/` are generated and committed. This is the job that
   # notices when they stop being what the pinned generator produces -- a header
   # change with no regeneration, or a hand edit to a file that says not to.
+  #
+  # Three targets, not all thirteen: each one pulls a GCCBootstrap sysroot, ~18 GB
+  # across the full set, which is well past what a runner should download or a cache
+  # should hold. These three cover the variation that could plausibly appear -- 64-bit,
+  # 32-bit, and Windows/LLP64 -- and a restricted sweep reproduces the committed file
+  # byte for byte, so it is a valid drift check. What it does *not* do is renew the
+  # claim that one file covers every platform; that needs the full sweep, is made
+  # locally, and is recorded in `gen/verified_targets.txt`.
   bindings:
     name: generated bindings are current
     runs-on: ubuntu-latest
@@ -49,6 +57,8 @@ jobs:
           version: '1'
       - uses: julia-actions/cache@v2
       - run: julia --project=gen gen/generator.jl
+        env:
+          TAPP_GEN_TARGETS: x86_64-linux-gnu,i686-linux-gnu,x86_64-w64-mingw32
       - name: src/lib is unchanged
         run: |
           git diff --exit-code -- src/lib \

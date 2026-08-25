@@ -1,0 +1,24 @@
+# Written by gen/generator.jl on a full sweep. Every target below produced
+# byte-identical bindings, which is why ../src/lib/libtapp.jl is one file.
+
+# Generated and compared:
+aarch64-apple-darwin20
+aarch64-linux-gnu
+aarch64-linux-musl
+armv7l-linux-gnueabihf
+armv7l-linux-musleabihf
+i686-linux-gnu
+i686-linux-musl
+powerpc64le-linux-gnu
+x86_64-apple-darwin14
+x86_64-linux-gnu
+x86_64-linux-musl
+x86_64-unknown-freebsd13.2
+x86_64-w64-mingw32
+
+# Shipped by the JLL, but Clang has no environment for them, so these are
+# covered by inference from the above rather than by generation:
+# aarch64-unknown-freebsd
+# armv6l-linux-gnueabihf
+# armv6l-linux-musleabihf
+# riscv64-linux-gnu
