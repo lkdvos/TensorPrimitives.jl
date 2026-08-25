@@ -68,12 +68,12 @@ end
 end
 
 @testset "the process context is one handle, reused" begin
-    # Public API rather than an internal, because the `TensorOperations` extension
-    # lives in another package and reaches for exactly these.
-    @test TP.handle() === TP.handle()
-    @test TP.executor() === TP.executor()
-    @test isvalid(TP.handle())
-    @test isvalid(TP.executor())
+    # Internal, but `backend.jl` leans on it for every contraction, so a second
+    # handle appearing per call would be a leak nothing else would notice.
+    @test TP._handle() === TP._handle()
+    @test TP._executor() === TP._executor()
+    @test isvalid(TP._handle())
+    @test isvalid(TP._executor())
 end
 
 @testset "tensor info round-trips" begin
@@ -112,7 +112,7 @@ end
     infoB = TP.TensorInfo(T, Int64[k, n], Int64[1, k])
     infoD = TP.TensorInfo(T, Int64[m, n], Int64[1, m])
     plan = TP.Product(
-        TP.handle(),
+        TP._handle(),
         LibTAPP.TAPP_IDENTITY, infoA, Int64[2, 1],
         LibTAPP.TAPP_IDENTITY, infoB, Int64[1, 3],
         LibTAPP.TAPP_IDENTITY, infoD, Int64[2, 3],
@@ -125,7 +125,7 @@ end
         # A null `C` with `beta == 0` means "overwrite, do not read", which is not
         # the same as multiplying an uninitialised value by zero.
         TP.execute!(
-            plan, TP.executor(), alpha, pointer(A), pointer(B),
+            plan, TP._executor(), alpha, pointer(A), pointer(B),
             beta, Ptr{T}(C_NULL), pointer(D)
         )
     end
@@ -153,7 +153,7 @@ end
     infoB = TP.TensorInfo(T, Int64[k, n], Int64[1, k])
     infoD = TP.TensorInfo(T, Int64[m, n], Int64[1, m])
     plan = TP.Product(
-        TP.handle(),
+        TP._handle(),
         LibTAPP.TAPP_IDENTITY, infoA, Int64[2, 1],
         LibTAPP.TAPP_IDENTITY, infoB, Int64[1, 3],
         LibTAPP.TAPP_IDENTITY, infoD, Int64[2, 3],
@@ -164,7 +164,7 @@ end
     beta = Ref(zero(T))
     GC.@preserve As Bs Ds begin
         TP.execute_batched!(
-            plan, TP.executor(), alpha,
+            plan, TP._executor(), alpha,
             [pointer(A) for A in As], [pointer(B) for B in Bs],
             beta, [Ptr{T}(C_NULL) for _ in 1:nbatch], [pointer(D) for D in Ds]
         )
@@ -179,7 +179,7 @@ end
     @test Ds[1] != Ds[2]
 
     @test_throws ArgumentError TP.execute_batched!(
-        plan, TP.executor(), alpha,
+        plan, TP._executor(), alpha,
         [pointer(As[1])], Ptr{T}[], beta, Ptr{T}[], Ptr{T}[]
     )
 

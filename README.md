@@ -47,9 +47,7 @@ header has moved ahead of any published artifact.
 
 ### Through `@tensor`
 
-The interesting entry point is a `TensorOperations.jl` backend. It is **a package
-extension of `TensorOperations` over this package**, so loading both is what turns it
-on — this package itself does not depend on `TensorOperations`:
+The interesting entry point is `TAPPBackend`, a `TensorOperations.jl` backend:
 
 ```julia
 using TensorOperations, TensorPrimitives
@@ -57,8 +55,14 @@ using TensorOperations, TensorPrimitives
 A = randn(ComplexF64, 8, 12, 4)
 B = randn(ComplexF64, 4, 12, 5)
 
-@tensor backend = TensorOperations.TAPPBackend() C[i, j] := conj(A[i, k, l]) * B[l, k, j]
+@tensor backend = TAPPBackend() C[i, j] := conj(A[i, k, l]) * B[l, k, j]
 ```
+
+`TensorOperations` is an ordinary dependency rather than a weak one, so the backend is
+simply there. That costs about 0.3 s of load time and ten small pure-Julia packages
+even if all you want is the raw ABI, which seemed the better trade against the
+alternatives — a backend type that cannot subtype `AbstractBackend`, or one whose name
+lives in an extension module nobody can reach.
 
 Conjugation is free — the engine folds it into packing as a negation of the imaginary
 plane — and a contraction permutes nothing, copies nothing and allocates no temporary:
@@ -83,14 +87,17 @@ which the backend does not do — it builds and destroys a plan per call.
 ```julia
 using TensorPrimitives
 
+handle = TensorPrimitives.Handle()
+exec = TensorPrimitives.Executor()
 info = TensorPrimitives.TensorInfo(Float64, Int64[4, 6], Int64[1, 4])  # strides in elements
-plan = TensorPrimitives.Product(TensorPrimitives.handle(), ...)
-TensorPrimitives.execute!(plan, TensorPrimitives.executor(), ...)
+plan = TensorPrimitives.Product(handle, ...)
+TensorPrimitives.execute!(plan, exec, ...)
 ```
 
-`handle()` and `executor()` are process-wide and created on first use. Handles are
-distinct Julia types with finalizers, so lifetimes take care of themselves;
-`destroy!` is available and idempotent when you want to be explicit.
+Handles are distinct Julia types with finalizers, so lifetimes take care of
+themselves; `destroy!` is available and idempotent when you want to be explicit. Build
+one `Handle` and one `Executor` and reuse them — they carry no per-call state, and the
+backend keeps one of each per process for exactly that reason.
 
 `TensorPrimitives.LibTAPP` is the raw ABI, one function per exported symbol,
 **generated** from the header the JLL ships. Every enumerator is there, including the

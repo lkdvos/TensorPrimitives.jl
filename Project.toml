@@ -5,6 +5,7 @@ version = "0.1.0"
 
 [deps]
 CEnum = "fa961155-64e5-5f13-b03f-caf6b980ea82"
+TensorOperations = "6aa20fa7-93e2-5fca-9bc0-fbd0db3c71a2"
 tensorprimitives_tapp_jll = "739e5c02-e8ce-5dff-a0a0-4b0ad5cc0c07"
 
 [extras]
@@ -23,6 +24,7 @@ CEnum = "0.4, 0.5"
 LinearAlgebra = "1"
 Random = "1"
 SafeTestsets = "0.1.0"
+TensorOperations = "5"
 Test = "1"
 julia = "1.10"
 tensorprimitives_tapp_jll = "0.1"

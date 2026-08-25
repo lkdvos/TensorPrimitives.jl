@@ -11,13 +11,13 @@ Two layers:
   * this module — handles with lifetimes, errors as exceptions, and the element-type
     mapping. Use it to plan a contraction once and execute it many times.
 
-For `@tensor` expressions, load `TensorOperations` as well and pass its
-`TAPPBackend`, which is a package extension of `TensorOperations` over this package:
+  * [`TAPPBackend`](@ref) — a `TensorOperations.jl` backend, so an existing `@tensor`
+    expression is routed through this engine by adding one keyword:
 
 ```julia
 using TensorOperations, TensorPrimitives
 A = randn(ComplexF64, 8, 12, 4); B = randn(ComplexF64, 4, 12, 5)
-@tensor backend = TensorOperations.TAPPBackend() C[i, j] := conj(A[i, k, l]) * B[l, k, j]
+@tensor backend = TAPPBackend() C[i, j] := conj(A[i, k, l]) * B[l, k, j]
 ```
 
 !!! warning "Prerelease"
@@ -35,7 +35,7 @@ include("LibTAPP.jl")
 using .LibTAPP: LibTAPP
 using CEnum: CEnum
 
-export TAPPError, TAPPElement
+export TAPPBackend, TAPPError, TAPPElement
 
 """
     TensorPrimitives.ABICode
@@ -228,20 +228,15 @@ destroy_status(status::ABICode) = check(LibTAPP.TAPP_destroy_status(status))
 # Not thread-safe to *initialise* concurrently, which is why each is behind a lock;
 # the library itself synchronises nothing, and the header says so.
 #
-# Public, not underscore-private, because the `TensorOperations` extension lives in
-# another package and an extension cannot reach into another package's internals.
+# Internal: `backend.jl` is the only caller. A user driving the raw layer builds their
+# own `Handle` and `Executor`, which is one line and makes the lifetime theirs.
 
 const _CONTEXT_LOCK = ReentrantLock()
 const _HANDLE = Ref{Union{Nothing, Handle}}(nothing)
 const _EXECUTOR = Ref{Union{Nothing, Executor}}(nothing)
 
-"""
-    handle() -> Handle
-
-The process-wide [`Handle`](@ref), created on first use. Reuse this rather than
-creating one per contraction.
-"""
-function handle()
+# The process-wide `Handle`, created on first use.
+function _handle()
     h = _HANDLE[]
     h === nothing || return h
     return lock(_CONTEXT_LOCK) do
@@ -251,13 +246,8 @@ function handle()
     end
 end
 
-"""
-    executor() -> Executor
-
-The process-wide [`Executor`](@ref), created on first use. Inert in this
-implementation — see [`thread_setting`](@ref).
-"""
-function executor()
+# The process-wide `Executor`, created on first use. Inert in this implementation.
+function _executor()
     e = _EXECUTOR[]
     e === nothing || return e
     return lock(_CONTEXT_LOCK) do
@@ -508,5 +498,7 @@ function thread_setting()
     n === nothing && return 1
     return max(n, 1)
 end
+
+include("backend.jl")
 
 end # module TensorPrimitives

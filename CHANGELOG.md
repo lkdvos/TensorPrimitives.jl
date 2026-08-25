@@ -39,11 +39,16 @@ lived as `julia/TensorPrimitives` and shared that repository's version.
 
 ### Changed
 
-* **The `TensorOperations` backend is no longer here.** It is an extension *in
-  `TensorOperations.jl`*, which is where that ecosystem put the equivalent TBLIS
-  bridge in v5.8.0, and the backend type is `TensorOperations.TAPPBackend`. So this
-  package has one dependency and no knowledge of `TensorOperations`, and a user
-  gets the backend by loading both.
+* **`TensorOperations` is an ordinary dependency, and `TAPPBackend` is exported from
+  here.** Three other arrangements were tried and measured first: an extension in
+  `TensorOperations.jl` itself (which is where that ecosystem put the equivalent TBLIS
+  bridge in v5.8.0), and two weak-dependency shapes in this package. A weakdep cannot
+  hold the backend type cleanly — the type must subtype
+  `TensorOperations.AbstractBackend`, which needs `TensorOperations` loaded, while the
+  *name* must be reachable without it — so it costs either an off-contract type that
+  subtypes nothing or a `function TAPPBackend end` whose real type lives in an
+  unreachable extension module. A hard dependency costs ~0.3 s of load and ten small
+  pure-Julia packages, which is the cheaper price.
 * **`tensoradd!` and `tensortrace!` now work** through the backend, by delegation.
   The in-tree version implemented only `tensorcontract!` and was documented as
   falling through to `TensorOperations`' own backends for the other two; it did not
