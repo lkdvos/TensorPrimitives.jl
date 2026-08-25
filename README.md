@@ -9,18 +9,21 @@ quoting a performance number.
 
 ## Installing
 
-Neither this package nor its JLL is in the General registry yet, so both are
-`develop`-ed from a checkout:
+`tensorprimitives_tapp_jll` is in the General registry, so the binary resolves by
+itself; only this package needs `develop`-ing until it is registered too:
 
 ```julia
 using Pkg
 Pkg.develop(path = "path/to/TensorPrimitives.jl")
-Pkg.develop(path = "path/to/tensorprimitives_tapp_jll")   # see below
 ```
 
+### Against a locally built engine
+
 The JLL comes from a BinaryBuilder recipe in
-[Yggdrasil](https://github.com/JuliaPackaging/Yggdrasil/tree/master/T/tensorprimitives_tapp).
-To build one locally:
+[Yggdrasil](https://github.com/JuliaPackaging/Yggdrasil/tree/master/T/tensorprimitives_tapp),
+pinned to a released commit. To test against an engine that is *not* released — or to
+regenerate the bindings for a changed header — build a JLL locally and `develop` that
+too:
 
 ```bash
 export BBROOT=/tmp/$USER/bb                   # local disk: overlayfs cannot
@@ -36,7 +39,9 @@ julia --project=$BBROOT/env build_tarballs.jl x86_64-linux-gnu \
 ```
 
 The recipe builds from the commit it pins, so a local build is of a released commit
-and not of your working tree.
+and not of your working tree. `gen/generator.jl` also takes `TAPP_INCLUDE_DIR`, which
+points it at an `install.sh --prefix=` layout instead of the JLL, for the case where the
+header has moved ahead of any published artifact.
 
 ## Using it
 
