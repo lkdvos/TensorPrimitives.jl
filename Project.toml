@@ -20,7 +20,7 @@ test = ["Test", "SafeTestsets", "Random", "LinearAlgebra", "Aqua"]
 
 [compat]
 Aqua = "0.8.9"
-CEnum = "0.4, 0.5"
+CEnum = "0.4, 0.5, 1.0"
 LinearAlgebra = "1"
 Random = "1"
 SafeTestsets = "0.1.0"
